@@ -1,9 +1,11 @@
+import { getStudentDetails, StudentDetails } from './firebaseService';
 
 export interface Message {
   id: string;
   text: string;
   isUser: boolean;
   timestamp: Date;
+  studentDetails?: StudentDetails | null;
 }
 
 // Sample quick reply suggestions based on context
@@ -60,6 +62,19 @@ export const getSuggestions = (context: string = ''): string[] => {
     ]
   };
 
+  const studentRelatedContexts = ['student', 'details', 'info', 'find', 'search'];
+  
+  if (studentRelatedContexts.some(keyword => context.toLowerCase().includes(keyword))) {
+    return [
+      'Find student KAKU VILASH KUMAR REDDY',
+      'Show details for KAKU VILASH KUMAR REDDY',
+      'Who is KAKU VILASH KUMAR REDDY?',
+      'Department contacts',
+      'Admission process',
+      'Course syllabus'
+    ];
+  }
+
   // Check if context matches any of our predefined categories
   for (const [key, suggestions] of Object.entries(contextualSuggestions)) {
     if (context.toLowerCase().includes(key)) {
@@ -70,16 +85,75 @@ export const getSuggestions = (context: string = ''): string[] => {
   return defaultSuggestions;
 };
 
+// Check if a query is requesting student information
+const isStudentQuery = (query: string): string | null => {
+  const patterns = [
+    /find student (.*)/i,
+    /show details for (.*)/i,
+    /who is (.*)/i,
+    /tell me about (.*)/i,
+    /information about (.*)/i,
+    /details of (.*)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = query.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+  
+  const studentQueryKeywords = ['details', 'student', 'information'];
+  if (studentQueryKeywords.some(keyword => query.toLowerCase().includes(keyword))) {
+    const words = query.split(' ');
+    const potentialNames = words.filter(word => 
+      word.length > 1 && word[0] === word[0].toUpperCase()
+    );
+    
+    if (potentialNames.length >= 2) {
+      return potentialNames.join(' ');
+    }
+  }
+  
+  return null;
+};
+
 // Mock response generator based on user query
-export const generateResponse = (query: string): Promise<string> => {
+export const generateResponse = async (query: string): Promise<{ text: string; studentDetails?: StudentDetails | null }> => {
+  const studentName = isStudentQuery(query);
+  
+  if (studentName) {
+    try {
+      const studentDetails = await getStudentDetails(studentName);
+      
+      if (studentDetails) {
+        return {
+          text: `Here are the details for ${studentDetails.name}:`,
+          studentDetails
+        };
+      } else {
+        return {
+          text: `I couldn't find any student with the name "${studentName}". Please check the spelling or try another name.`,
+          studentDetails: null
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching student details:', error);
+      return {
+        text: "I'm having trouble retrieving student information at the moment. Please try again later.",
+        studentDetails: null
+      };
+    }
+  }
+  
   return new Promise((resolve) => {
-    // Simulate API delay
     setTimeout(() => {
       const normalizedQuery = query.toLowerCase();
       
-      // Simple keyword-based response mapping
       if (normalizedQuery.includes('hello') || normalizedQuery.includes('hi') || normalizedQuery.includes('hey')) {
-        resolve('Hello! I\'m PEC Assistant, your guide to Prathyusha Engineering College. How can I help you today?');
+        resolve({ text: 'Hello! I\'m PEC Assistant, your guide to Prathyusha Engineering College. How can I help you today?' });
+      } else if (normalizedQuery.includes('student') || normalizedQuery.includes('details') || normalizedQuery.includes('information')) {
+        resolve({ text: 'I can help you find information about students. Try asking "Show details for KAKU VILASH KUMAR REDDY" or search for any other student by name.' });
       } else if (normalizedQuery.includes('admission') || normalizedQuery.includes('apply')) {
         resolve('For admissions at PEC, you need to complete the online application form, submit required documents, and qualify the entrance criteria. The admission process typically starts in April. Would you like specific details about any part of the admission process?');
       } else if (normalizedQuery.includes('syllabus') || normalizedQuery.includes('course')) {
@@ -99,8 +173,8 @@ export const generateResponse = (query: string): Promise<string> => {
       } else if (normalizedQuery.includes('thank')) {
         resolve('You\'re welcome! If you have any more questions about PEC, feel free to ask anytime. I\'m here to help!');
       } else {
-        resolve('I\'m not sure I understand. Could you please rephrase your question or select one of the suggested topics below?');
+        resolve({ text: 'I\'m not sure I understand. Could you please rephrase your question or select one of the suggested topics below?' });
       }
-    }, 1500); // 1.5 second delay to simulate API call
+    }, 1500);
   });
 };

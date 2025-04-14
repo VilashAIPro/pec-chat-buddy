@@ -1,14 +1,17 @@
 
 import React from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { StudentDetails } from '@/services/firebaseService';
+import StudentDetailsCard from './StudentDetailsCard';
 
 export interface MessageProps {
   text: string;
   isUser: boolean;
   timestamp: Date;
+  studentDetails?: StudentDetails | null;
 }
 
-const Message: React.FC<MessageProps> = ({ text, isUser, timestamp }) => {
+const Message: React.FC<MessageProps> = ({ text, isUser, timestamp, studentDetails }) => {
   const isMobile = useIsMobile();
   
   return (
@@ -21,6 +24,14 @@ const Message: React.FC<MessageProps> = ({ text, isUser, timestamp }) => {
       
       <div className={isUser ? 'user-message animate-bounce-in' : 'bot-message animate-bounce-in'}>
         <p className="text-sm">{text}</p>
+        
+        {/* Student Details Card */}
+        {!isUser && studentDetails && (
+          <div className="mt-3">
+            <StudentDetailsCard student={studentDetails} />
+          </div>
+        )}
+        
         <div className={`text-xs mt-1 ${isUser ? 'text-pec-light' : 'text-muted-foreground'}`}>
           {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>

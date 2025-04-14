@@ -7,6 +7,8 @@ import QuickReplies from './QuickReplies';
 import ChatInput from './ChatInput';
 import { Message as MessageType } from '../services/chatService';
 import { generateResponse, getSuggestions } from '../services/chatService';
+import { StudentDetails } from '../services/firebaseService';
+import { toast } from '@/hooks/use-toast';
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<MessageType[]>([
@@ -44,26 +46,42 @@ const ChatInterface: React.FC = () => {
     
     try {
       // Generate response
-      const responseText = await generateResponse(text);
+      const response = await generateResponse(text);
       
       // Add bot response after a short delay
       setTimeout(() => {
         const botMessage: MessageType = {
           id: (Date.now() + 1).toString(),
-          text: responseText,
+          text: response.text,
           isUser: false,
-          timestamp: new Date()
+          timestamp: new Date(),
+          studentDetails: response.studentDetails
         };
         
         setMessages((prev) => [...prev, botMessage]);
         setIsTyping(false);
         
+        // If student details were requested but not found, show toast
+        if (text.toLowerCase().includes('student') && !response.studentDetails) {
+          toast({
+            title: "Student Search",
+            description: "Could not find the requested student information",
+            variant: "destructive",
+          });
+        }
+        
         // Update suggestions based on context
-        setSuggestions(getSuggestions(text + ' ' + responseText));
+        setSuggestions(getSuggestions(text + ' ' + response.text));
       }, 500);
     } catch (error) {
       console.error('Error generating response:', error);
       setIsTyping(false);
+      
+      toast({
+        title: "Error",
+        description: "There was a problem connecting to the service",
+        variant: "destructive",
+      });
     }
   };
 
@@ -82,6 +100,7 @@ const ChatInterface: React.FC = () => {
             text={message.text}
             isUser={message.isUser}
             timestamp={message.timestamp}
+            studentDetails={message.studentDetails}
           />
         ))}
         
