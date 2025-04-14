@@ -1,6 +1,7 @@
 
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebaseService';
+import { StudentDetails } from './firebaseService';
 
 export interface MentorDetails {
   name: string;
@@ -82,5 +83,29 @@ export const getStudentMentorInfo = async (registerNo: string): Promise<StudentM
   } catch (error) {
     console.error('Error fetching student mentor info:', error);
     return null;
+  }
+};
+
+// Function to get students by mentor name
+export const getStudentsByMentor = async (mentorName: string): Promise<StudentDetails[]> => {
+  try {
+    const studentsRef = collection(db, 'students');
+    const q = query(studentsRef, where('mentor', '==', mentorName));
+    
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+      console.log('No students found for this mentor');
+      return [];
+    }
+    
+    const students: StudentDetails[] = [];
+    querySnapshot.forEach((doc) => {
+      students.push(doc.data() as StudentDetails);
+    });
+    
+    return students;
+  } catch (error) {
+    console.error('Error fetching students by mentor:', error);
+    return [];
   }
 };

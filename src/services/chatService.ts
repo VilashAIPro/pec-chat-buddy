@@ -1,5 +1,5 @@
 import { getStudentDetails, StudentDetails, getStudentByRegisterNo } from './firebaseService';
-import { getMentorByName, getMentorByDepartment, MentorDetails } from './mentorService';
+import { getMentorByName, getMentorByDepartment, MentorDetails, getStudentsByMentor } from './mentorService';
 
 export interface Message {
   id: string;
@@ -8,6 +8,7 @@ export interface Message {
   timestamp: Date;
   studentDetails?: StudentDetails | null;
   mentorDetails?: MentorDetails | null;
+  students?: StudentDetails[];
 }
 
 // Sample quick reply suggestions based on context
@@ -176,6 +177,29 @@ const isMentorQuery = (query: string): string | null => {
   return null;
 };
 
+// Check if a query is requesting students by mentor
+const isStudentsByMentorQuery = (query: string): string | null => {
+  const patterns = [
+    /students (under|of|for) (.*)/i,
+    /who are (.*)'s students/i,
+    /list students (under|of|for) (.*)/i,
+    /show me students (under|of|for) (.*)/i,
+    /mentees (under|of|for) (.*)/i,
+    /who are (.*)'s mentees/i,
+    /list mentees (under|of|for) (.*)/i,
+    /show me mentees (under|of|for) (.*)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = query.match(pattern);
+    if (match && match[2]) {
+      return match[2].trim();
+    }
+  }
+  
+  return null;
+};
+
 // Extract department and section from query
 const extractDepartmentSection = (query: string): { department: string; section?: string } | null => {
   const deptPattern = /(CSE|ECE|MECH|CIVIL|AI&DS|ME|EEE)\s*([A-C])?/i;
@@ -222,6 +246,7 @@ export const generateResponse = async (query: string): Promise<{
   text: string; 
   studentDetails?: StudentDetails | null;
   mentorDetails?: MentorDetails | null;
+  students?: StudentDetails[];
 }> => {
   const registerNo = extractRegisterNumber(query);
   if (registerNo) {
@@ -245,6 +270,40 @@ export const generateResponse = async (query: string): Promise<{
     }
   }
 
+  // Check for students by mentor query
+  const mentorForStudents = isStudentsByMentorQuery(query);
+  if (mentorForStudents) {
+    try {
+      const mentorDetails = await getMentorByName(mentorForStudents);
+      
+      if (mentorDetails) {
+        const students = await getStudentsByMentor(mentorDetails.name);
+        
+        if (students && students.length > 0) {
+          return {
+            text: `I found ${students.length} students under mentor ${mentorDetails.name}:`,
+            mentorDetails,
+            students
+          };
+        } else {
+          return {
+            text: `${mentorDetails.name} is a mentor, but I couldn't find any students assigned to them in the database.`,
+            mentorDetails
+          };
+        }
+      } else {
+        return {
+          text: `I couldn't find a mentor named "${mentorForStudents}". Please check the spelling or try another name.`
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching students by mentor:', error);
+      return {
+        text: "I'm having trouble retrieving the student list. Please try again later."
+      };
+    }
+  }
+
   const mentorName = isMentorQuery(query);
   if (mentorName) {
     try {
@@ -253,9 +312,12 @@ export const generateResponse = async (query: string): Promise<{
       if (deptInfo) {
         const mentorDetails = await getMentorByDepartment(deptInfo.department, deptInfo.section);
         if (mentorDetails) {
+          const students = await getStudentsByMentor(mentorDetails.name);
+          
           return {
             text: `The mentor for ${deptInfo.department}${deptInfo.section ? ' ' + deptInfo.section : ''} is:`,
-            mentorDetails
+            mentorDetails,
+            students: students && students.length > 0 ? students : undefined
           };
         } else {
           return {
@@ -267,9 +329,12 @@ export const generateResponse = async (query: string): Promise<{
       const mentorDetails = await getMentorByName(mentorName);
       
       if (mentorDetails) {
+        const students = await getStudentsByMentor(mentorDetails.name);
+        
         return {
           text: `Here are the details for mentor ${mentorDetails.name}:`,
-          mentorDetails
+          mentorDetails,
+          students: students && students.length > 0 ? students : undefined
         };
       } else {
         return {
@@ -315,12 +380,12 @@ export const generateResponse = async (query: string): Promise<{
       
       if (normalizedQuery.includes('mentor') || normalizedQuery.includes('faculty')) {
         resolve({ 
-          text: 'I can help you find information about mentors at PEC. You can ask about a specific mentor by name (e.g., "Who is Dr. KAVIMANI?"), or ask about mentors for a specific department (e.g., "Who is the mentor for CSE A?").'
+          text: 'I can help you find information about mentors at PEC. You can ask about a specific mentor by name (e.g., "Who is Dr. KAVIMANI?"), or ask about mentors for a specific department (e.g., "Who is the mentor for CSE A?"), or even see student lists (e.g., "Show me students under Dr. KAVIMANI").'
         });
       } else if (normalizedQuery.includes('hello') || normalizedQuery.includes('hi') || normalizedQuery.includes('hey')) {
         resolve({ text: 'Hello! I\'m PEC Assistant, your guide to Prathyusha Engineering College. How can I help you today?' });
       } else if (normalizedQuery.includes('student') || normalizedQuery.includes('details') || normalizedQuery.includes('information')) {
-        resolve({ text: 'I can help you find information about students and their mentors. Try asking "Show details for KAKU VILASH KUMAR REDDY" or "Find mentor for CSE A" to get started.' });
+        resolve({ text: 'I can help you find information about students and their mentors. Try asking "Show details for KAKU VILASH KUMAR REDDY" or "Find mentor for CSE A" or "Show me students under Dr. KAVIMANI" to get started.' });
       } else if (normalizedQuery.includes('admission') || normalizedQuery.includes('apply')) {
         resolve({ text: 'For admissions at PEC, you need to complete the online application form, submit required documents, and qualify the entrance criteria. The admission process typically starts in April. Would you like specific details about any part of the admission process?' });
       } else if (normalizedQuery.includes('syllabus') || normalizedQuery.includes('course')) {

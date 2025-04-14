@@ -1,14 +1,23 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MentorDetails } from '@/services/mentorService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { GraduationCap, BookUser, Users, School } from 'lucide-react';
+import { BookUser, Users, School, ChevronDown, ChevronUp, GraduationCap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { StudentDetails } from '@/services/firebaseService';
 
 interface MentorDetailsCardProps {
   mentor: MentorDetails;
+  students?: StudentDetails[];
 }
 
-const MentorDetailsCard: React.FC<MentorDetailsCardProps> = ({ mentor }) => {
+const MentorDetailsCard: React.FC<MentorDetailsCardProps> = ({ mentor, students }) => {
+  const [showStudents, setShowStudents] = useState(false);
+  
+  const toggleStudents = () => {
+    setShowStudents(!showStudents);
+  };
+
   return (
     <Card className="w-full bg-white border border-pec-primary/20 shadow-md animate-bounce-in">
       <CardHeader className="bg-gradient-to-r from-pec-secondary to-pec-primary text-white rounded-t-lg pb-3">
@@ -51,6 +60,33 @@ const MentorDetailsCard: React.FC<MentorDetailsCardProps> = ({ mentor }) => {
               <p className="font-medium">{mentor.students_count}</p>
             </div>
           </div>
+          
+          {students && students.length > 0 && (
+            <div className="mt-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={toggleStudents} 
+                className="flex items-center gap-1 w-full justify-between"
+              >
+                <span>View Mentees</span>
+                {showStudents ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </Button>
+              
+              {showStudents && (
+                <div className="mt-3 max-h-[200px] overflow-y-auto border rounded-md p-2">
+                  <ul className="space-y-2">
+                    {students.map((student, index) => (
+                      <li key={index} className="text-sm border-b last:border-0 pb-1">
+                        <p className="font-medium">{student.name}</p>
+                        <p className="text-xs text-muted-foreground">{student.register_no}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -12,6 +12,7 @@ export interface MessageProps {
   timestamp: Date;
   studentDetails?: StudentDetails | null;
   mentorDetails?: MentorDetails | null;
+  students?: StudentDetails[];
 }
 
 const Message: React.FC<MessageProps> = ({ 
@@ -19,7 +20,8 @@ const Message: React.FC<MessageProps> = ({
   isUser, 
   timestamp, 
   studentDetails, 
-  mentorDetails 
+  mentorDetails,
+  students
 }) => {
   const isMobile = useIsMobile();
   
@@ -44,7 +46,10 @@ const Message: React.FC<MessageProps> = ({
         {/* Mentor Details Card */}
         {!isUser && mentorDetails && (
           <div className="mt-3">
-            <MentorDetailsCard mentor={mentorDetails} />
+            <MentorDetailsCard 
+              mentor={mentorDetails} 
+              students={students} 
+            />
           </div>
         )}
         
