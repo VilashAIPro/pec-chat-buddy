@@ -2,16 +2,25 @@
 import React from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StudentDetails } from '@/services/firebaseService';
+import { MentorDetails } from '@/services/mentorService';
 import StudentDetailsCard from './StudentDetailsCard';
+import MentorDetailsCard from './MentorDetailsCard';
 
 export interface MessageProps {
   text: string;
   isUser: boolean;
   timestamp: Date;
   studentDetails?: StudentDetails | null;
+  mentorDetails?: MentorDetails | null;
 }
 
-const Message: React.FC<MessageProps> = ({ text, isUser, timestamp, studentDetails }) => {
+const Message: React.FC<MessageProps> = ({ 
+  text, 
+  isUser, 
+  timestamp, 
+  studentDetails, 
+  mentorDetails 
+}) => {
   const isMobile = useIsMobile();
   
   return (
@@ -29,6 +38,13 @@ const Message: React.FC<MessageProps> = ({ text, isUser, timestamp, studentDetai
         {!isUser && studentDetails && (
           <div className="mt-3">
             <StudentDetailsCard student={studentDetails} />
+          </div>
+        )}
+        
+        {/* Mentor Details Card */}
+        {!isUser && mentorDetails && (
+          <div className="mt-3">
+            <MentorDetailsCard mentor={mentorDetails} />
           </div>
         )}
         

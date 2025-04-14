@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -14,7 +13,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+export const db = getFirestore(app);
 
 export interface StudentDetails {
   register_no: string;
@@ -63,5 +62,24 @@ export const searchStudentsByName = async (partialName: string): Promise<Student
   } catch (error) {
     console.error('Error searching students:', error);
     return [];
+  }
+};
+
+// Function to fetch student by register number
+export const getStudentByRegisterNo = async (registerNo: string): Promise<StudentDetails | null> => {
+  try {
+    const studentsRef = collection(db, 'students');
+    const q = query(studentsRef, where('register_no', '==', registerNo));
+    
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+      console.log('No student found with this register number');
+      return null;
+    }
+    
+    return querySnapshot.docs[0].data() as StudentDetails;
+  } catch (error) {
+    console.error('Error fetching student by register number:', error);
+    return null;
   }
 };

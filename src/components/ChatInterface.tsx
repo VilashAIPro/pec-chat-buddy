@@ -8,13 +8,14 @@ import ChatInput from './ChatInput';
 import { Message as MessageType } from '../services/chatService';
 import { generateResponse, getSuggestions } from '../services/chatService';
 import { StudentDetails } from '../services/firebaseService';
+import { MentorDetails } from '../services/mentorService';
 import { toast } from '@/hooks/use-toast';
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<MessageType[]>([
     {
       id: '1',
-      text: 'Hi there! I\'m the PEC Assistant. I can help you with information about Prathyusha Engineering College. What would you like to know?',
+      text: 'Hi there! I\'m the PEC Assistant. I can help you with information about Prathyusha Engineering College, students, and mentors. What would you like to know?',
       isUser: false,
       timestamp: new Date()
     }
@@ -55,19 +56,23 @@ const ChatInterface: React.FC = () => {
           text: response.text,
           isUser: false,
           timestamp: new Date(),
-          studentDetails: response.studentDetails
+          studentDetails: response.studentDetails,
+          mentorDetails: response.mentorDetails
         };
         
         setMessages((prev) => [...prev, botMessage]);
         setIsTyping(false);
         
-        // If student details were requested but not found, show toast
-        if (text.toLowerCase().includes('student') && !response.studentDetails) {
-          toast({
-            title: "Student Search",
-            description: "Could not find the requested student information",
-            variant: "destructive",
-          });
+        // Show toast for information not found
+        if ((text.toLowerCase().includes('student') && !response.studentDetails) || 
+            (text.toLowerCase().includes('mentor') && !response.mentorDetails)) {
+          if (!response.text.includes("I can help you find")) {
+            toast({
+              title: text.toLowerCase().includes('student') ? "Student Search" : "Mentor Search",
+              description: "Could not find the requested information",
+              variant: "destructive",
+            });
+          }
         }
         
         // Update suggestions based on context
@@ -101,6 +106,7 @@ const ChatInterface: React.FC = () => {
             isUser={message.isUser}
             timestamp={message.timestamp}
             studentDetails={message.studentDetails}
+            mentorDetails={message.mentorDetails}
           />
         ))}
         

@@ -1,5 +1,5 @@
-
-import { getStudentDetails, StudentDetails } from './firebaseService';
+import { getStudentDetails, StudentDetails, getStudentByRegisterNo } from './firebaseService';
+import { getMentorByName, getMentorByDepartment, MentorDetails } from './mentorService';
 
 export interface Message {
   id: string;
@@ -7,6 +7,7 @@ export interface Message {
   isUser: boolean;
   timestamp: Date;
   studentDetails?: StudentDetails | null;
+  mentorDetails?: MentorDetails | null;
 }
 
 // Sample quick reply suggestions based on context
@@ -60,10 +61,30 @@ export const getSuggestions = (context: string = ''): string[] => {
       'Workshop schedule',
       'Industry visits',
       'Placement drives'
+    ],
+    'mentor': [
+      'Find my mentor',
+      'Who is Dr. KAVIMANI?',
+      'CSE A mentor',
+      'AI&DS department mentors',
+      'Students under P.UMA',
+      'Number of mentees for Dr. KAVIMANI'
     ]
   };
 
   const studentRelatedContexts = ['student', 'details', 'info', 'find', 'search'];
+  const mentorRelatedContexts = ['mentor', 'faculty', 'teacher', 'guide', 'department'];
+  
+  if (mentorRelatedContexts.some(keyword => context.toLowerCase().includes(keyword))) {
+    return [
+      'Who is the mentor for CSE A?',
+      'Show details for Dr. KAVIMANI',
+      'Who is Mrs. P.UMA?',
+      'Find mentors in AI&DS department',
+      'How many students under Mrs. METILDA?',
+      'Show all mentors'
+    ];
+  }
   
   if (studentRelatedContexts.some(keyword => context.toLowerCase().includes(keyword))) {
     return [
@@ -119,10 +140,152 @@ const isStudentQuery = (query: string): string | null => {
   return null;
 };
 
-// Mock response generator based on user query
-export const generateResponse = async (query: string): Promise<{ text: string; studentDetails?: StudentDetails | null }> => {
-  const studentName = isStudentQuery(query);
+// Check if a query is requesting mentor information
+const isMentorQuery = (query: string): string | null => {
+  const patterns = [
+    /find mentor (.*)/i,
+    /show details for (.*)/i,
+    /who is (.*)/i,
+    /tell me about (.*)/i,
+    /information about (.*)/i,
+    /details of (.*)/i,
+    /mentor for (.*)/i,
+    /who mentors (.*)/i,
+    /teacher for (.*)/i,
+  ];
   
+  for (const pattern of patterns) {
+    const match = query.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+  
+  const mentorQueryKeywords = ['mentor', 'faculty', 'teacher', 'guide', 'advisor'];
+  if (mentorQueryKeywords.some(keyword => query.toLowerCase().includes(keyword))) {
+    const words = query.split(' ');
+    const potentialNames = words.filter(word => 
+      word.length > 1 && word[0] === word[0].toUpperCase()
+    );
+    
+    if (potentialNames.length >= 2) {
+      return potentialNames.join(' ');
+    }
+  }
+  
+  return null;
+};
+
+// Extract department and section from query
+const extractDepartmentSection = (query: string): { department: string; section?: string } | null => {
+  const deptPattern = /(CSE|ECE|MECH|CIVIL|AI&DS|ME|EEE)\s*([A-C])?/i;
+  const match = query.match(deptPattern);
+  
+  if (match) {
+    return {
+      department: match[1].toUpperCase(),
+      section: match[2] ? match[2].toUpperCase() : undefined
+    };
+  }
+  
+  const fullDeptMap: Record<string, string> = {
+    'computer science': 'CSE',
+    'electronics': 'ECE',
+    'mechanical': 'MECH',
+    'civil': 'CIVIL',
+    'artificial intelligence': 'AI&DS',
+    'data science': 'AI&DS',
+    'electrical': 'EEE'
+  };
+  
+  for (const [key, value] of Object.entries(fullDeptMap)) {
+    if (query.toLowerCase().includes(key)) {
+      const sectionMatch = query.match(/section\s*([A-C])/i);
+      return {
+        department: value,
+        section: sectionMatch ? sectionMatch[1].toUpperCase() : undefined
+      };
+    }
+  }
+  
+  return null;
+};
+
+// Check for register number in query
+const extractRegisterNumber = (query: string): string | null => {
+  const regMatch = query.match(/(\d{8}[A-Z]{2}\d{5})/i);
+  return regMatch ? regMatch[1] : null;
+};
+
+// Mock response generator based on user query
+export const generateResponse = async (query: string): Promise<{ 
+  text: string; 
+  studentDetails?: StudentDetails | null;
+  mentorDetails?: MentorDetails | null;
+}> => {
+  const registerNo = extractRegisterNumber(query);
+  if (registerNo) {
+    try {
+      const studentDetails = await getStudentByRegisterNo(registerNo);
+      if (studentDetails) {
+        return {
+          text: `Here are the details for register number ${registerNo}:`,
+          studentDetails
+        };
+      } else {
+        return {
+          text: `I couldn't find a student with register number "${registerNo}". Please check and try again.`
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching student by register number:', error);
+      return {
+        text: "I'm having trouble retrieving student information. Please try again later."
+      };
+    }
+  }
+
+  const mentorName = isMentorQuery(query);
+  if (mentorName) {
+    try {
+      const deptInfo = extractDepartmentSection(query);
+      
+      if (deptInfo) {
+        const mentorDetails = await getMentorByDepartment(deptInfo.department, deptInfo.section);
+        if (mentorDetails) {
+          return {
+            text: `The mentor for ${deptInfo.department}${deptInfo.section ? ' ' + deptInfo.section : ''} is:`,
+            mentorDetails
+          };
+        } else {
+          return {
+            text: `I couldn't find mentor information for ${deptInfo.department}${deptInfo.section ? ' ' + deptInfo.section : ''}. Please check the department code and try again.`
+          };
+        }
+      }
+      
+      const mentorDetails = await getMentorByName(mentorName);
+      
+      if (mentorDetails) {
+        return {
+          text: `Here are the details for mentor ${mentorDetails.name}:`,
+          mentorDetails
+        };
+      } else {
+        return {
+          text: `I couldn't find a mentor named "${mentorName}". Please check the spelling or try another name.`,
+          mentorDetails: null
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching mentor details:', error);
+      return {
+        text: "I'm having trouble retrieving mentor information. Please try again later."
+      };
+    }
+  }
+  
+  const studentName = isStudentQuery(query);
   if (studentName) {
     try {
       const studentDetails = await getStudentDetails(studentName);
@@ -141,8 +304,7 @@ export const generateResponse = async (query: string): Promise<{ text: string; s
     } catch (error) {
       console.error('Error fetching student details:', error);
       return {
-        text: "I'm having trouble retrieving student information at the moment. Please try again later.",
-        studentDetails: null
+        text: "I'm having trouble retrieving student information at the moment. Please try again later."
       };
     }
   }
@@ -151,10 +313,14 @@ export const generateResponse = async (query: string): Promise<{ text: string; s
     setTimeout(() => {
       const normalizedQuery = query.toLowerCase();
       
-      if (normalizedQuery.includes('hello') || normalizedQuery.includes('hi') || normalizedQuery.includes('hey')) {
+      if (normalizedQuery.includes('mentor') || normalizedQuery.includes('faculty')) {
+        resolve({ 
+          text: 'I can help you find information about mentors at PEC. You can ask about a specific mentor by name (e.g., "Who is Dr. KAVIMANI?"), or ask about mentors for a specific department (e.g., "Who is the mentor for CSE A?").'
+        });
+      } else if (normalizedQuery.includes('hello') || normalizedQuery.includes('hi') || normalizedQuery.includes('hey')) {
         resolve({ text: 'Hello! I\'m PEC Assistant, your guide to Prathyusha Engineering College. How can I help you today?' });
       } else if (normalizedQuery.includes('student') || normalizedQuery.includes('details') || normalizedQuery.includes('information')) {
-        resolve({ text: 'I can help you find information about students. Try asking "Show details for KAKU VILASH KUMAR REDDY" or search for any other student by name.' });
+        resolve({ text: 'I can help you find information about students and their mentors. Try asking "Show details for KAKU VILASH KUMAR REDDY" or "Find mentor for CSE A" to get started.' });
       } else if (normalizedQuery.includes('admission') || normalizedQuery.includes('apply')) {
         resolve({ text: 'For admissions at PEC, you need to complete the online application form, submit required documents, and qualify the entrance criteria. The admission process typically starts in April. Would you like specific details about any part of the admission process?' });
       } else if (normalizedQuery.includes('syllabus') || normalizedQuery.includes('course')) {
