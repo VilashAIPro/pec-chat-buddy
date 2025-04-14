@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,8 +13,12 @@ const ChatHeader = () => {
   return (
     <div className="flex items-center justify-between p-4 border-b bg-white dark:bg-pec-dark">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pec-primary to-pec-secondary flex items-center justify-center">
-          <span className="text-white font-bold text-lg">P</span>
+        <div className="w-10 h-10 rounded-full overflow-hidden">
+          <img 
+            src="/lovable-uploads/e8064f8e-0955-4872-b9bd-3aa912915c01.png" 
+            alt="PEC Chatbot Logo" 
+            className="w-full h-full object-cover"
+          />
         </div>
         <div>
           <h2 className="font-bold text-lg">PEC Assistant</h2>

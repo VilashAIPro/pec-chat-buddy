@@ -10,8 +10,12 @@ interface WelcomeScreenProps {
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   return (
     <div className="min-h-[600px] w-full max-w-2xl mx-auto flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-      <div className="w-24 h-24 mb-6 rounded-full bg-gradient-to-r from-pec-primary to-pec-secondary flex items-center justify-center">
-        <span className="text-white font-bold text-3xl">PEC</span>
+      <div className="w-24 h-24 mb-6 rounded-full overflow-hidden">
+        <img 
+          src="/lovable-uploads/e8064f8e-0955-4872-b9bd-3aa912915c01.png" 
+          alt="PEC Chatbot Logo" 
+          className="w-full h-full object-cover"
+        />
       </div>
       
       <h1 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-pec-primary to-pec-secondary text-transparent bg-clip-text">
