@@ -112,6 +112,20 @@
   }
 }
 
+@layer utilities {
+  .animation-delay-0 {
+    animation-delay: 0ms;
+  }
+  
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+}
+
 @layer components {
   .typing-indicator {
     @apply inline-block relative w-16 h-6;

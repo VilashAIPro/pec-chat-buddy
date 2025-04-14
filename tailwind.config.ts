@@ -124,6 +124,11 @@ export default {
 				'bounce-in': 'bounce-in 0.5s ease',
 				'fade-in': 'fade-in 0.3s ease',
 				'fade-up': 'fade-up 0.5s ease'
+			},
+			animationDelay: {
+				'0': '0ms',
+				'200': '200ms',
+				'400': '400ms',
 			}
 		}
 	},
